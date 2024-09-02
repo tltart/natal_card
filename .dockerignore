@@ -1,0 +1,11 @@
+build
+dest
+node_modules
+.Dockerfile
+.prettier*
+README*
+*eslint*
+coverage
+.vscode
+**.env
+.git*

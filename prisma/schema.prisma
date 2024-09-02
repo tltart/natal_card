@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Chat {
+  id           Int           @id @default(autoincrement())
+  chatId       Int
+  target       Target[]
+  natalCards   NatalCards[]
+  CountReports CountReports?
+}
+
+model Target {
+  id         Int         @id @default(autoincrement())
+  name       String
+  birthDate  String
+  birthTime  String
+  birthPlace String
+  createdAt  DateTime    @default(now())
+  chat       Chat        @relation(fields: [chatId], references: [id])
+  chatId     Int
+  NatalCards NatalCards?
+}
+
+model NatalCards {
+  id       Int    @id @default(autoincrement())
+  chatId   Int
+  chat     Chat   @relation(fields: [chatId], references: [id])
+  text     String
+  target   Target @relation(fields: [targetId], references: [id])
+  targetId Int    @unique
+}
+
+model CountReports {
+  id             Int  @id @default(autoincrement())
+  chatId         Int  @unique
+  chat           Chat @relation(fields: [chatId], references: [id])
+  countReportDay Int
+  dayLimit       Int
+  payedLimit     Int  @default(0)
+}
