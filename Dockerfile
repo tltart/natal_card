@@ -1,6 +1,6 @@
 FROM node:18.17.0-alpine
 
-ENV NODE_PATH /usr/src/app/node_modules
+ENV NODE_PATH="/usr/src/app/node_modules"
 ENV PATH="$NODE_PATH/.bin:$PATH"
 
 WORKDIR $NODE_PATH/..
