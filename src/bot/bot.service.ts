@@ -73,9 +73,9 @@ export class BotService implements OnModuleInit {
       const chatId = msg.chat.id;
 
       await bot.sendMessage(chatId, `Привет, ${msg.from.first_name}`);
-      const target = await this.prisma.findAllCardsByChatId(chatId);
-      if (target && target.target.length) {
-        await sendAllCards(bot, chatId, target.target);
+      const cards = await this.prisma.findAllCardsByChatId(chatId);
+      if (cards && cards.target.length) {
+        await sendAllCards(bot, chatId, cards.target);
         return;
       }
       await sendCardName({
@@ -99,10 +99,18 @@ export class BotService implements OnModuleInit {
       const chatId = msg.chat.id;
 
       await bot.sendMessage(chatId, 'Ваши сохранненные натальные карты');
-      const { target } = await this.prisma.findAllCardsByChatId(chatId);
-      if (target.length) {
-        await sendAllCards(bot, chatId, target);
+      const target = await this.prisma.findAllCardsByChatId(chatId);
+      if (target && target.target.length) {
+        await sendAllCards(bot, chatId, target.target);
         return;
+      } else {
+        await sendCardName({
+          bot,
+          chatId,
+          userStates: this.userStates,
+          userData: this.userData,
+        });
+        this.userStates.set(chatId, Stages.AWAITING_BIRTH_NAME);
       }
     });
 
