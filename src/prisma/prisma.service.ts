@@ -7,6 +7,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     await this.$connect();
   }
 
+  async findUsersByChatId(chatId: number) {
+    return this.user.findMany({ where: { chatId } });
+  }
+
   async findChatByChatId(chatId: number) {
     return this.chat.findFirst({ where: { chatId } });
   }
@@ -45,7 +49,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
   }
 
   async findTargetbyNameAndChatId(chatId: number, name: string) {
-    return this.target.findFirst({
+    return this.user.findFirst({
       where: {
         name,
         chatId,
@@ -60,7 +64,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     birthPlace: string,
     name: string,
   ) {
-    return this.target.create({
+    return this.user.create({
       data: {
         chatId,
         birthDate,
@@ -71,18 +75,18 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     });
   }
 
-  async createNatalCard(chatId: number, text: string, targetId: number) {
+  async createNatalCard(chatId: number, text: string, userId: number) {
     return this.natalCards.create({
       data: {
         chatId,
         text,
-        targetId,
+        userId,
       },
     });
   }
 
   async findTargetByPlaceAndDate(birthDate: string, birthPlace: string) {
-    return this.target.findFirst({
+    return this.user.findFirst({
       where: {
         birthDate,
         birthPlace: birthPlace.toUpperCase(),
@@ -101,7 +105,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     return this.chat.findFirst({
       where: { chatId },
       include: {
-        target: true,
+        User: true,
       },
     });
   }

@@ -10,30 +10,30 @@ datasource db {
 model Chat {
   id           Int           @id @default(autoincrement())
   chatId       Int
-  target       Target[]
   natalCards   NatalCards[]
   CountReports CountReports?
+  User         User[]
 }
 
-model Target {
+model User {
   id         Int         @id @default(autoincrement())
   name       String
   birthDate  String
   birthTime  String
   birthPlace String
-  createdAt  DateTime    @default(now())
   chat       Chat        @relation(fields: [chatId], references: [id])
   chatId     Int
   NatalCards NatalCards?
+  createdAt  DateTime    @default(now())
 }
 
 model NatalCards {
-  id       Int    @id @default(autoincrement())
-  chatId   Int
-  chat     Chat   @relation(fields: [chatId], references: [id])
-  text     String
-  target   Target @relation(fields: [targetId], references: [id])
-  targetId Int    @unique
+  id     Int    @id @default(autoincrement())
+  chatId Int
+  chat   Chat   @relation(fields: [chatId], references: [id])
+  text   String
+  user   User   @relation(fields: [userId], references: [id])
+  userId Int    @unique
 }
 
 model CountReports {
