@@ -24,15 +24,17 @@ export class GptService {
   };
 
   async onModuleInit() {
-    const proxyUrl = `http://${this.configServise.get('PROXY_HOST')}:${this.configServise.get('PROXY_PORT')}`;
-    const proxyAgent = new HttpsProxyAgent(proxyUrl);
-
-    this.gptSend = axios.create({ httpsAgent: proxyAgent });
+    const isLocal = this.configServise.get('LOCAL') === 'true';
+    if (isLocal){
+      const proxyUrl = `http://${this.configServise.get('PROXY_HOST')}:${this.configServise.get('PROXY_PORT')}`;
+      const proxyAgent = new HttpsProxyAgent(proxyUrl);
+      this.gptSend = axios.create({ httpsAgent: proxyAgent });
+    }
     await this.gptInit();
   }
 
   async gptInit() {
-    console.log('Init gpt service');
+    console.log('Gpt init service');
   }
 
   async gptRequest(messages: IMessage[]) {
@@ -213,6 +215,21 @@ export class GptService {
       {
         role: 'user',
         content: `${promts.type.default.role.user.content} ${reportType}`,
+      },
+    ];
+
+    return this.gptRequest(messages);
+  }
+
+  async getGoroscope(period: 'Today' | 'Tommorow', sign: string) {
+    const messages: IMessage[] = [
+      {
+        role: 'system',
+        content: `${promts.type.createGoroscope.role.system.content} Текуцщее время: ${new Date().toISOString()}`,
+      },
+      {
+        role: 'user',
+        content: `${promts.type.createGoroscope.role.user.content} Знак зодиака ${sign}, гороскоп на ${period === 'Today' ? 'сегодня' : 'завтра'}.`,
       },
     ];
 

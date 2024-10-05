@@ -37,3 +37,8 @@ export interface IGetPersonEvolutionDto {
   natalCard: string;
   reportType: string;
 }
+
+export interface IGetGoroscope {
+  period: 'Today' | 'Tommorow';
+  sign: string;
+}

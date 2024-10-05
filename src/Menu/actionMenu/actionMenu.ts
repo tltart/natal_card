@@ -17,6 +17,9 @@ export class ActionMenuService {
       case UserDataActionMenuCallbacks.ACCEPT:
         action = UserDataActionMenuCallbacks.ACCEPT;
         break;
+      case UserDataActionMenuCallbacks.REMOVE:
+        action = UserDataActionMenuCallbacks.REMOVE;
+        break;
       case UserDataActionMenuCallbacks.UPDATE:
         action = UserDataActionMenuCallbacks.UPDATE;
         break;

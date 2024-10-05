@@ -7,6 +7,7 @@ import { ProfessionMenuService } from './professionMenu/professionMenu';
 import { FinanseMenuService } from './finanseMenu/finanseMenu';
 import { HealthMenuService } from './healthMenu/healthMenu';
 import { ActionMenuService } from './actionMenu/actionMenu';
+import { GoroscopeMenuService } from './goroscopeMenu/goroscopeMenu';
 
 @Module({
   providers: [
@@ -18,6 +19,7 @@ import { ActionMenuService } from './actionMenu/actionMenu';
     FinanseMenuService,
     HealthMenuService,
     ActionMenuService,
+    GoroscopeMenuService,
   ],
   exports: [MenuService],
 })

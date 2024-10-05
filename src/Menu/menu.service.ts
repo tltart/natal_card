@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { mainMenuItems, MainMenuCallbacks, LocaleMainMenu } from './itemsMenu/itemsMainMenu';
+import { mainMenuItems, MainMenuCallbacks, LocaleMainMenu, mainMenuItemsInline } from './itemsMenu/itemsMainMenu';
 import { PredictMenuService } from './predictMenu/predictMenu';
 import { LocalePredictMenu } from './itemsMenu/predictMenu';
 import { LocaleAnalyzePersonMenu } from './itemsMenu/analyzePersonMenu';
@@ -13,6 +13,7 @@ import { FinanseMenuService } from './finanseMenu/finanseMenu';
 import { HealthMenuService } from './healthMenu/healthMenu';
 import { LocaleHealthMenu } from './itemsMenu/healthMenu';
 import { ActionMenuService } from './actionMenu/actionMenu';
+import { GoroscopeMenuService } from './goroscopeMenu/goroscopeMenu';
 
 @Injectable()
 export class MenuService implements OnModuleInit {
@@ -24,6 +25,7 @@ export class MenuService implements OnModuleInit {
     private readonly finanseMenu: FinanseMenuService,
     private readonly healthMenu: HealthMenuService,
     private readonly actionMenu: ActionMenuService,
+    private readonly goroscopeMenu: GoroscopeMenuService,
   ) {}
 
   async onModuleInit() {
@@ -33,7 +35,8 @@ export class MenuService implements OnModuleInit {
   getMainMenuKeboard() {
     return {
       reply_markup: {
-        keyboard: mainMenuItems.map((item) => [item]),
+        keyboard: [mainMenuItems.map((item) => item)],
+        resize_keyboard: true,
       },
     };
   }
@@ -41,13 +44,17 @@ export class MenuService implements OnModuleInit {
   getMainMenuInlineKeboard() {
     return {
       reply_markup: {
-        inline_keyboard: mainMenuItems.map((item) => [item]),
+        inline_keyboard: mainMenuItemsInline.map((item) => [item]),
       },
     };
   }
 
   getUserDataActionMenu() {
     return this.actionMenu.getMenuUserDataActionInlineKeboard();
+  }
+
+  getGoroscopeMenu(){
+    return this.goroscopeMenu.getMenuGoroscopeInlineKeboard();
   }
 
   handleAllSubMenus(cbName: string) {
@@ -58,11 +65,12 @@ export class MenuService implements OnModuleInit {
       this.professionMenu.handle(cbName) ||
       this.finanseMenu.handle(cbName) ||
       this.healthMenu.handle(cbName) ||
-      this.actionMenu.handle(cbName);
+      this.actionMenu.handle(cbName) ||
+      this.goroscopeMenu.handle(cbName);
     return action;
   }
 
-  handle(cbName: string): {
+  handleInlineMenu(cbName: string): {
     title: string | null;
     keyboard: ReturnType<typeof this.getMainMenuInlineKeboard> | null;
   } {
@@ -100,6 +108,33 @@ export class MenuService implements OnModuleInit {
         nextMenu.title = LocaleHealthMenu.HEALTH_MENU;
         nextMenu.keyboard = this.healthMenu.getSubMenuFinanseInlineKeboard();
         break;
+      default:
+        break;
+    }
+    return nextMenu;
+  }
+
+  handleKeyboard(cbName: string): {
+    title: string | null;
+    keyboard: ReturnType<typeof this.getMainMenuKeboard> | null;
+  } {
+    const nextMenu = { title: null, keyboard: null } as {
+      title: string | null;
+      keyboard: ReturnType<MenuService['getMainMenuKeboard']> | null;
+    };
+    switch (cbName) {
+      case MainMenuCallbacks.MAIN_MENU:
+        nextMenu.title = LocaleMainMenu.MAIN_MENU;
+        nextMenu.keyboard = this.getMainMenuKeboard();
+        break;
+      // case MainMenuCallbacks.PREDICT:
+      //   nextMenu.title = LocalePredictMenu.PREDICT;
+      //   nextMenu.keyboard = this.predictMenu.getPredictMenuInlineKeboard();
+      //   break;
+      // case MainMenuCallbacks.ANALYZE_PERSON:
+      //   nextMenu.title = LocaleAnalyzePersonMenu.ANALYZE_PERSON;
+      //   nextMenu.keyboard = this.analyzePersonMenu.getSubMenuAnalyzePersonInlineKeboard();
+      //   break;
       default:
         break;
     }

@@ -6,7 +6,7 @@ export class ChatService implements OnModuleInit {
   constructor(private readonly prisma: PrismaService) {}
 
   async onModuleInit() {
-    console.log('Chat service init');
+    // console.log('Chat service init');
   }
 
   async findChatByChatId(chatId: number) {

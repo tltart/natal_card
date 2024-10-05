@@ -6,9 +6,13 @@ export enum MainMenuCallbacks {
   PROFESSION = 'PROFESSION',
   HEALTH_RECOMENDATIONS = 'HEALTH_RECOMENDATIONS',
   FINANSE_ANALYZE = 'FINANSE_ANALYZE',
+  USER_DATA = 'USER_DATA',
+  GOROSCOPES = 'GOROSCOPES',
 }
 
 export enum LocaleMainMenu {
+  USER_DATA = '📜 Мои данные',
+  GOROSCOPES = '🌌 Гороскопы',
   MAIN_MENU = 'Главное меню',
   PREDICT = 'Прогнозы',
   ANALYZE_PERSON = 'Анализ личности',
@@ -18,7 +22,7 @@ export enum LocaleMainMenu {
   HEALTH_RECOMENDATIONS = 'Здоровье',
 }
 
-export const mainMenuItems: { text: string; callback_data: string }[] = [
+export const mainMenuItemsInline: { text: string; callback_data: string }[] = [
   {
     text: LocaleMainMenu.PREDICT,
     callback_data: MainMenuCallbacks.PREDICT,
@@ -42,5 +46,16 @@ export const mainMenuItems: { text: string; callback_data: string }[] = [
   {
     text: LocaleMainMenu.HEALTH_RECOMENDATIONS,
     callback_data: MainMenuCallbacks.HEALTH_RECOMENDATIONS,
+  },
+];
+
+export const mainMenuItems: { text: string; callback_data: string }[] = [
+  {
+    text: LocaleMainMenu.USER_DATA,
+    callback_data: MainMenuCallbacks.PREDICT,
+  },
+  {
+    text: LocaleMainMenu.GOROSCOPES,
+    callback_data: MainMenuCallbacks.GOROSCOPES,
   },
 ];

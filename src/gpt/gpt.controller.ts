@@ -9,6 +9,7 @@ import {
   IGetFinanseDto,
   IGetHealthDto,
   IGetLifeCyclesDto,
+  IGetGoroscope,
 } from './dto/messageDto';
 
 @Controller()
@@ -66,5 +67,11 @@ export class GptController {
   handleMessagePersonEvolution(message: string) {
     const data = JSON.parse(message) as IGetLifeCyclesDto;
     return this.gptService.getPersonEvolution(data.natalCard, data.reportType);
+  }
+
+  @MessagePattern('get-goroscope')
+  handleMessageGoroscopeToday(message: string) {
+    const data = JSON.parse(message) as IGetGoroscope;
+    return this.gptService.getGoroscope(data.period, data.sign);
   }
 }

@@ -4,60 +4,62 @@ import { IUserData } from './interfaces/userData';
 import { UserDataStages } from './interfaces/dataStages';
 import { ChatService } from 'src/chat/chat.service';
 import { Messages } from 'src/messages/messages';
-import { isValidDate } from 'src/utils/checkDate';
-import { isValidTime } from 'src/utils/checkTime';
+import { isValidDate } from 'src/shared/checkDate';
+import { isValidTime } from 'src/shared/checkTime';
+import { ErrorsEnum } from 'src/errors/errorsEnum';
+import { getZodiacSign } from '../shared/zodiacCalculate';
 
 @Injectable()
 export class UserService implements OnModuleInit {
-  private _userData: IUserData = {
-    name: null,
-    birthDate: null,
-    birthPlace: null,
-    birthTime: null,
-    accepted: false,
-  };
+  private _userData: Map<number, IUserData> = new Map();
 
-  private _userStageData: keyof typeof UserDataStages | '';
+  private _userStageData: Map<number, keyof typeof UserDataStages | ''> = new Map();
 
-  public get userStageData() {
-    return this._userStageData;
+  private _isUpdatedData: Map<number, boolean> = new Map();
+
+  public get isUpdatedData(): Map<number, boolean> {
+    return this._isUpdatedData;
   }
-  public set userStageData(stage: keyof typeof UserDataStages | '') {
-    this._userStageData = stage;
+  public set isUpdatedData({ chatId, value }: { chatId: number; value: boolean }) {
+    this._isUpdatedData.set(chatId, value);
   }
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly chatSerice: ChatService,
+    private readonly chatService: ChatService,
   ) {}
 
-  public get userData(): IUserData {
-    return this._userData;
+  public getUserData(chatId: number): IUserData {
+    return this._userData.get(chatId);
   }
 
-  dropUserData() {
-    this._userData.name = null;
-    this._userData.birthDate = null;
-    this._userData.birthPlace = null;
-    this._userData.birthTime = null;
+  dropUserData(chatId: number) {
+    this.userData = { chatId, value: { name: null } };
+    this.userData = { chatId, value: { birthDate: null } };
+    this.userData = { chatId, value: { zodiac: null } };
+    this.userData = { chatId, value: { birthTime: null } };
+    this.userData = { chatId, value: { birthPlace: null } };
   }
 
-  dropUserStageData() {
-    this._userStageData = '';
+  dropUserStageData(chatId: number) {
+    this._userStageData.set(chatId, '');
   }
 
-  public set userData(value: IUserData) {
-    if (value.name) {
-      this._userData.name = value.name;
+  public set userData({ chatId, value }: { chatId: number; value: Partial<IUserData> }) {
+    if ('name' in value) {
+      this._userData.set(chatId, { ...this._userData.get(chatId), name: value.name });
     }
-    if (value.birthDate) {
-      this._userData.birthDate = value.birthDate;
+    if ('birthDate' in value) {
+      this._userData.set(chatId, { ...this._userData.get(chatId), birthDate: value.birthDate });
     }
-    if (value.birthTime) {
-      this._userData.birthTime = value.birthTime;
+    if ('zodiac' in value) {
+      this._userData.set(chatId, { ...this._userData.get(chatId), zodiac: value.zodiac });
     }
-    if (value.birthPlace) {
-      this._userData.birthPlace = value.birthPlace;
+    if ('birthTime' in value) {
+      this._userData.set(chatId, { ...this._userData.get(chatId), birthTime: value.birthTime });
+    }
+    if ('birthPlace' in value) {
+      this._userData.set(chatId, { ...this._userData.get(chatId), birthPlace: value.birthPlace });
     }
   }
 
@@ -65,34 +67,63 @@ export class UserService implements OnModuleInit {
     console.log('Chat service init');
   }
 
-  checkFullUserData() {
-    if (this.userData.name && this.userData.birthDate && this.userData.birthTime && this.userData.birthPlace) return true;
+  checkFullUserData(chatId: number) {
+    const user = this.getUserData(chatId);
+    if (user?.name && user?.birthDate && user?.birthTime && user?.birthPlace) return true;
     return false;
   }
 
   async createUser(chatId: number) {
     const chat = await this.prisma.chat.findFirst({ where: { chatId } });
+    const user = await this.prisma.user.findFirst({ where: { chatId: chat.id } });
+    if (user) throw new Error(ErrorsEnum.EXSIR_USER);
     return this.prisma.user.create({
       data: {
-        name: this.userData.name,
-        birthDate: this.userData.birthDate,
-        birthTime: this.userData.birthTime,
-        birthPlace: this.userData.birthPlace,
+        name: this._userData.get(chatId).name,
+        birthDate: this._userData.get(chatId).birthDate,
+        birthTime: this._userData.get(chatId).birthTime,
+        birthPlace: this._userData.get(chatId).birthPlace,
         chatId: chat.id,
       },
     });
   }
 
+  async updateUser(chatId: number) {
+    const chat = await this.prisma.chat.findFirst({ where: { chatId } });
+    return this.prisma.user.updateMany({
+      data: {
+        name: this._userData.get(chatId).name,
+        birthDate: this._userData.get(chatId).birthDate,
+        birthTime: this._userData.get(chatId).birthTime,
+        birthPlace: this._userData.get(chatId).birthPlace,
+      },
+      where: { chatId: chat.id },
+    });
+  }
+
+  async deleteUser(chatId: number) {
+    const chat = await this.prisma.chat.findFirst({ where: { chatId } });
+    return this.prisma.user.deleteMany({
+      where: { chatId: chat.id },
+    });
+  }
+
   async findUsersByChatId(chatId: number) {
-    const chat = await this.chatSerice.findChatByChatId(chatId);
+    const chat = await this.chatService.findChatByChatId(chatId);
     return this.prisma.findUsersByChatId(chat.id);
   }
 
   async checkUserData(chatId: number) {
-    if (this.checkFullUserData()) {
+    if (this.checkFullUserData(chatId)) {
       const userInDb = await this.findUsersByChatId(chatId);
       if (userInDb) {
-        this.userData = userInDb[0];
+        this._userData.set(chatId, {
+          birthDate: userInDb[0].birthDate,
+          birthPlace: userInDb[0].birthPlace,
+          birthTime: userInDb[0].birthTime,
+          name: userInDb[0].name,
+          zodiac: getZodiacSign(userInDb[0].birthDate),
+        });
         return true;
       }
       await this.createUser(chatId);
@@ -101,37 +132,35 @@ export class UserService implements OnModuleInit {
     return false;
   }
 
-  async checkStageUserData(text?: string) {
-    if (!this.userData.name && !this.userStageData) {
-      this.userStageData = UserDataStages.AWAITING_BIRTH_NAME;
+  async checkStageUserData({ chatId, text }: { chatId: number; text?: string }) {
+    if (!this._userData.get(chatId)?.name && !this._userStageData?.get(chatId)) {
+      this._userStageData.set(chatId, UserDataStages.AWAITING_BIRTH_NAME);
       return Messages.ENTER_NAME;
-    } else if (!this.userData.birthDate && this.userStageData === UserDataStages.AWAITING_BIRTH_NAME) {
-      this.userData.name = text;
-      this.userStageData = UserDataStages.AWAITING_BIRTH_DATE;
+    } else if (!this._userData.get(chatId)?.birthDate && this._userStageData.get(chatId) === UserDataStages.AWAITING_BIRTH_NAME && text) {
+      this.userData = { chatId, value: { name: text } };
+      this._userStageData.set(chatId, UserDataStages.AWAITING_BIRTH_DATE);
       return Messages.ENTER_DATE;
-    } else if (!this.userData.birthTime && this.userStageData === UserDataStages.AWAITING_BIRTH_DATE) {
+    } else if (!this._userData.get(chatId)?.birthTime && this._userStageData.get(chatId) === UserDataStages.AWAITING_BIRTH_DATE) {
       if (!text || !isValidDate(text)) {
         return Messages.WRONG_DATA;
       }
-      this.userData.birthDate = text;
-      this.userStageData = UserDataStages.AWAITING_BIRTH_TIME;
+      this.userData = { chatId, value: { birthDate: text } };
+      this.userData = { chatId, value: { zodiac: getZodiacSign(text) } };
+      this._userStageData.set(chatId, UserDataStages.AWAITING_BIRTH_TIME);
       return Messages.ENTER_TIME;
-    } else if (!this.userData.birthPlace && this.userStageData === UserDataStages.AWAITING_BIRTH_TIME) {
+    } else if (!this._userData.get(chatId)?.birthPlace && this._userStageData.get(chatId) === UserDataStages.AWAITING_BIRTH_TIME) {
       if (!isValidTime(text)) {
         return Messages.WRONG_DATA;
       }
-      this.userData.birthTime = text;
-      this.userStageData = UserDataStages.AWAITING_BIRTH_PLACE;
+      this.userData = { chatId, value: { birthTime: text } };
+      this._userStageData.set(chatId, UserDataStages.AWAITING_BIRTH_PLACE);
       return Messages.ENTER_PLACE;
-    } else if (!this.userData.birthPlace && this.userStageData === UserDataStages.AWAITING_BIRTH_PLACE) {
-      this.userData.birthPlace = text;
-      this.userStageData = '';
-      await this.sendInlineMenuToBot({
-        chatId,
-        title: `Вы ввели данные:\n\n\<b>🏷 Имя:</b> ${this.userData.name}\n<b>📆 Дата рождения:</b> ${this.userData.birthDate}\n<b>⏰ Время рождения:</b> ${this.userData.birthTime}\n<b>🌏 Место рождения:</b> ${this.userService.userData.birthPlace}`,
-        menu: this.mainMenuService.getUserDataActionMenu(),
-      });
-      return Messages.ENTER_PLACE;
+    } else if (!this._userData.get(chatId)?.birthPlace && this._userStageData.get(chatId) === UserDataStages.AWAITING_BIRTH_PLACE) {
+      this.userData = { chatId, value: { birthPlace: text } };
+      this._userStageData.set(chatId, '');
+      return;
+    } else if (this._userStageData.get(chatId).length) {
+      return Messages.WRONG_DATA;
     }
     throw new Error('UNKNOWN STAGE USER DATA');
   }

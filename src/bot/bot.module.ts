@@ -10,9 +10,9 @@ import { ChatModule } from 'src/chat/chat.module';
 @Module({
   imports: [
     MenuModule,
+    ChatModule,
     GptModule,
     UserModule,
-    ChatModule,
     ClientsModule.register([
       {
         name: 'GPT_SERVICE',

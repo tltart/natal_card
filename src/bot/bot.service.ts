@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import TelegramBot from 'node-telegram-bot-api';
 import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
@@ -7,6 +9,11 @@ import { UserService } from 'src/users/user.service';
 import { ChatService } from 'src/chat/chat.service';
 import { Messages } from '../messages/messages';
 import { UserDataActionMenuCallbacks } from 'src/Menu/itemsMenu/actionMenu';
+import { ErrorsEnum } from 'src/errors/errorsEnum';
+import { LocaleMainMenu, mainMenuItems } from 'src/Menu/itemsMenu/itemsMainMenu';
+import { GoroscopeMenuCallbacks } from 'src/Menu/itemsMenu/goroscopeMenu';
+import { textOnImage } from '../shared/textOnImage';
+import { lastValueFrom } from 'rxjs';
 
 @Injectable()
 export class BotService implements OnModuleInit {
@@ -21,12 +28,29 @@ export class BotService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    console.log('Init bot service');
+    console.log('Bot init service');
     this.bot = new TelegramBot(this.configService.get<string>('BOT_TOKEN'), {
       polling: true,
     });
-    // await this.gpt.connect();
+    await this.gpt.connect();
     this.botMessage();
+  }
+
+  async updateUser(chatId: number) {
+    this.userService.dropUserData(chatId);
+    this.userService.dropUserStageData(chatId);
+    this.userService.isUpdatedData = { chatId, value: true };
+    const message = await this.userService.checkStageUserData({ chatId });
+    await this.sendMessageToBot({ chatId, message });
+    return;
+  }
+
+  async removeUser(chatId: number) {
+    this.userService.dropUserData(chatId);
+    this.userService.dropUserStageData(chatId);
+    const message = await this.userService.checkStageUserData({ chatId });
+    await this.sendMessageToBot({ chatId, message });
+    return;
   }
 
   async startCommand(chatId: number) {
@@ -38,7 +62,7 @@ export class BotService implements OnModuleInit {
     if (!users.length) {
       return false;
     }
-    this.userService.userData = users[0];
+    this.userService.userData = { chatId, value: users[0] };
     return users;
   }
 
@@ -50,6 +74,9 @@ export class BotService implements OnModuleInit {
     return this.bot.sendMessage(chatId, title, { reply_markup: menu.reply_markup, parse_mode: 'HTML' });
   }
 
+  async sendKeyboard({ chatId, title, menu }: { chatId: number; title: string; menu: ReturnType<MenuService['getMainMenuKeboard']> }) {
+    return this.bot.sendMessage(chatId, title, { reply_markup: menu.reply_markup });
+  }
 
   async botMessage() {
     this.bot.setMyCommands([
@@ -58,25 +85,21 @@ export class BotService implements OnModuleInit {
     ]);
 
     this.bot.onText(/\/start/, async (msg) => {
-      this.userService.dropUserData();
-      this.userService.dropUserStageData();
-
       const chatId = msg.chat.id;
+
+      this.userService.dropUserData(chatId);
+      this.userService.dropUserStageData(chatId);
 
       await this.startCommand(chatId);
 
       const isUserExsist = await this.userService.checkUserData(chatId);
 
       if (!isUserExsist) {
-        const message = await this.userService.checkStageUserData();
+        const message = await this.userService.checkStageUserData({ chatId });
         await this.sendMessageToBot({ chatId, message });
+        return;
       }
-      await this.sendMessageToBot({
-        chatId,
-        message: `Ваши данные:\n\n\<b>🏷 Имя:</b> ${this.userService.userData.name}\n<b>📆 Дата рождения:</b> ${this.userService.userData.birthDate}\n<b>⏰ Время рождения:</b> ${this.userService.userData.birthTime}\n<b>🌏Место рождения:</b> ${this.userService.userData.birthPlace}`,
-      });
-      // await this.sendInlineMenuToBot({ chatId, title: 'Главное меню', menu: this.mainMenu.getMainMenuInlineKeboard() });
-      // await this.bot.sendMessage(chatId, 'Главное меню', this.mainMenu.getMainMenuInlineKeboard());
+      return await this.sendKeyboard({ chatId, title: 'Выбрать действие', menu: this.mainMenuService.getMainMenuKeboard() });
     });
 
     this.bot.on('message', async (msg) => {
@@ -85,25 +108,109 @@ export class BotService implements OnModuleInit {
       if (!text || text.startsWith('/')) {
         return;
       }
-      const fullUserData = await this.userService.checkUserData(chatId, text);
-      if (!fullUserData) return;
+      if (mainMenuItems.some((items) => text.includes(items.text))) {
+        return await this.handleTextMessages({ chatId, message: text });
+      }
+      const fullUserData = await this.userService.checkUserData(chatId);
+      if (!fullUserData) {
+        const message = await this.userService.checkStageUserData({ chatId, text });
+        if (message && message.length !== 0) {
+          await this.sendMessageToBot({ chatId, message });
+          return;
+        }
+      }
+      const user = this.userService.getUserData(chatId);
+      return await this.sendInlineMenuToBot({
+        chatId,
+        title: `Ваши данные:\n\n\<b>🏷 Имя:</b> ${user.name}\n<b>📆 Дата рождения:</b> ${user.birthDate}\n<b>⏰ Время рождения:</b> ${user.birthTime}\n<b>🌏Место рождения:</b> ${user.birthPlace}`,
+        menu: this.mainMenuService.getUserDataActionMenu(),
+      });
     });
 
     this.bot.on('callback_query', async (cbData) => {
       const { data: cbName } = cbData;
       const chatId = Number(cbData.message.chat.id);
-      const nextMenu = this.mainMenuService.handle(cbName);
-      if (nextMenu.title && nextMenu.keyboard) {
-        await this.bot.sendMessage(chatId, nextMenu.title, nextMenu.keyboard);
-      }
-      const actionSubMenu = this.mainMenuService.handleAllSubMenus(cbName);
-      if (actionSubMenu.length) {
-        if (actionSubMenu === UserDataActionMenuCallbacks.ACCEPT) {
-          await this.userService.createUser(chatId);
-          await this.sendMessageToBot({ chatId, message: Messages.PREPARING_GOROSCOPE_TODAY });
+      try {
+        const nextMenu = this.mainMenuService.handleInlineMenu(cbName);
+        if (nextMenu.title && nextMenu.keyboard) {
+          await this.bot.sendMessage(chatId, nextMenu.title, nextMenu.keyboard);
         }
-        await this.bot.sendMessage(chatId, actionSubMenu);
+        const actionSubMenu = this.mainMenuService.handleAllSubMenus(cbName);
+        if (actionSubMenu.length && this.userService.checkFullUserData(chatId)) {
+          if (actionSubMenu === UserDataActionMenuCallbacks.ACCEPT) {
+            if (this.userService.isUpdatedData.get(chatId) === true) {
+              await this.userService.updateUser(chatId);
+              await this.sendMessageToBot({ chatId, message: 'Данные успешно обновлены' });
+              this.userService.isUpdatedData.set(chatId, false);
+              return;
+            }
+            await this.userService.createUser(chatId);
+            await this.sendMessageToBot({ chatId, message: Messages.PREPARING_GOROSCOPE_TODAY });
+            await this.sendAnimationSign(chatId);
+            return;
+          } else if (actionSubMenu === UserDataActionMenuCallbacks.UPDATE) {
+            this.userService.dropUserData(chatId);
+            this.userService.dropUserStageData(chatId);
+            await this.updateUser(chatId);
+            return;
+          } else if (actionSubMenu === UserDataActionMenuCallbacks.REMOVE) {
+            this.userService.dropUserData(chatId);
+            this.userService.dropUserStageData(chatId);
+            await this.userService.deleteUser(chatId);
+            return await this.sendMessageToBot({ chatId, message: 'Данные успешно удалены' });
+          } else if (actionSubMenu === GoroscopeMenuCallbacks.GOROSCOPE_TODAY) {
+            await this.bot.sendMessage(chatId, 'Строю гороскоп на сегодня...');
+            await this.sendAnimationSign(chatId);
+            const response$ = this.gpt.send<string>('get-goroscope', JSON.stringify({ period: 'Today', sign: this.userService.getUserData(chatId).zodiac }));
+            const response = await lastValueFrom(response$);
+            const im = await textOnImage(response);
+            await this.bot.sendPhoto(chatId, im);
+            return;
+          } else if (actionSubMenu === GoroscopeMenuCallbacks.GOROSCOPE_TOMORROW) {
+            await this.bot.sendMessage(chatId, 'Строю гороскоп на завтра...');
+            await this.sendAnimationSign(chatId);
+            const response$ = this.gpt.send<string>('get-goroscope', JSON.stringify({ period: 'Tomorrow', sign: this.userService.getUserData(chatId).zodiac }));
+            const response = await lastValueFrom(response$);
+            const im = await textOnImage(response);
+            await this.bot.sendPhoto(chatId, im);
+
+            return;
+          }
+          await this.bot.sendMessage(chatId, actionSubMenu);
+        }
+      } catch (error: unknown) {
+        if (typeof error === 'object' && error !== null && 'message' in error && Object.values(ErrorsEnum).includes(error.message as ErrorsEnum)) {
+          return await this.bot.sendMessage(chatId, error.message as string);
+        }
+        this.bot.sendMessage(chatId, '❌ Произошла ошибка. Повторите ввод.');
       }
     });
+  }
+
+  async handleTextMessages({ chatId, message }: { chatId: number; message: string }) {
+    await this.startCommand(chatId);
+    const isUserExsist = await this.userService.checkUserData(chatId);
+
+    if (!isUserExsist) {
+      const message = await this.userService.checkStageUserData({ chatId });
+      await this.sendMessageToBot({ chatId, message });
+      return;
+    }
+    const user = this.userService.getUserData(chatId);
+    if (message === LocaleMainMenu.USER_DATA) {
+      return await this.sendInlineMenuToBot({
+        chatId,
+        title: `Ваши данные:\n\n\<b>🏷 Имя:</b> ${user.name}\n<b>📆 Дата рождения:</b> ${user.birthDate}\n<b>⏰ Время рождения:</b> ${user.birthTime}\n<b>🌏Место рождения:</b> ${user.birthPlace}`,
+        menu: this.mainMenuService.getUserDataActionMenu(),
+      });
+    } else if (message === LocaleMainMenu.GOROSCOPES) {
+      return await this.sendInlineMenuToBot({ chatId, title: 'Выбрать гороскоп', menu: this.mainMenuService.getGoroscopeMenu() });
+    }
+  }
+
+  async sendAnimationSign(chatId: number) {
+    const imgPath = path.resolve(__dirname, '../..', `static/spinners/spinner_${this.userService.getUserData(chatId).zodiac.toLowerCase()}.gif`);
+    const buff = fs.readFileSync(imgPath);
+    await this.bot.sendAnimation(chatId, buff);
   }
 }
