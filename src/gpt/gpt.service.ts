@@ -29,6 +29,8 @@ export class GptService {
       const proxyUrl = `http://${this.configServise.get('PROXY_HOST')}:${this.configServise.get('PROXY_PORT')}`;
       const proxyAgent = new HttpsProxyAgent(proxyUrl);
       this.gptSend = axios.create({ httpsAgent: proxyAgent });
+    } else {
+      this.gptSend = axios.create();
     }
     await this.gptInit();
   }
