@@ -81,7 +81,7 @@ export class BotService implements OnModuleInit {
   async botMessage() {
     this.bot.setMyCommands([
       { command: 'start', description: 'Старт' },
-      { command: 'cards', description: 'Мои карты' },
+      // { command: 'cards', description: 'Мои карты' },
     ]);
 
     this.bot.onText(/\/start/, async (msg) => {
@@ -147,6 +147,11 @@ export class BotService implements OnModuleInit {
             await this.userService.createUser(chatId);
             await this.sendMessageToBot({ chatId, message: Messages.PREPARING_GOROSCOPE_TODAY });
             await this.sendAnimationSign(chatId);
+            const response$ = this.gpt.send<string>('get-goroscope', JSON.stringify({ period: 'Today', sign: this.userService.getUserData(chatId).zodiac }));
+            const response = await lastValueFrom(response$);
+            const im = await textOnImage(response);
+            await this.bot.sendPhoto(chatId, im);
+            await this.sendKeyboard({ chatId, title: 'Выбрать действие', menu: this.mainMenuService.getMainMenuKeboard() });
             return;
           } else if (actionSubMenu === UserDataActionMenuCallbacks.UPDATE) {
             this.userService.dropUserData(chatId);
