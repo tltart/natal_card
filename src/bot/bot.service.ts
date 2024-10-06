@@ -14,6 +14,7 @@ import { LocaleMainMenu, mainMenuItems } from 'src/Menu/itemsMenu/itemsMainMenu'
 import { GoroscopeMenuCallbacks } from 'src/Menu/itemsMenu/goroscopeMenu';
 import { textOnImage } from '../shared/textOnImage';
 import { lastValueFrom } from 'rxjs';
+import { LocaleZodiac } from 'src/users/interfaces/userData';
 
 @Injectable()
 export class BotService implements OnModuleInit {
@@ -147,7 +148,7 @@ export class BotService implements OnModuleInit {
             await this.userService.createUser(chatId);
             await this.sendMessageToBot({ chatId, message: Messages.PREPARING_GOROSCOPE_TODAY });
             await this.sendAnimationSign(chatId);
-            const response$ = this.gpt.send<string>('get-goroscope', JSON.stringify({ period: 'Today', sign: this.userService.getUserData(chatId).zodiac }));
+            const response$ = this.gpt.send<string>('get-goroscope', JSON.stringify({ period: 'Today', sign: LocaleZodiac[this.userService.getUserData(chatId).zodiac] }));
             const response = await lastValueFrom(response$);
             const im = await textOnImage(response);
             await this.bot.sendPhoto(chatId, im);
@@ -166,7 +167,7 @@ export class BotService implements OnModuleInit {
           } else if (actionSubMenu === GoroscopeMenuCallbacks.GOROSCOPE_TODAY) {
             await this.bot.sendMessage(chatId, 'Строю гороскоп на сегодня...');
             await this.sendAnimationSign(chatId);
-            const response$ = this.gpt.send<string>('get-goroscope', JSON.stringify({ period: 'Today', sign: this.userService.getUserData(chatId).zodiac }));
+            const response$ = this.gpt.send<string>('get-goroscope', JSON.stringify({ period: 'Today', sign: LocaleZodiac[this.userService.getUserData(chatId).zodiac] }));
             const response = await lastValueFrom(response$);
             const im = await textOnImage(response);
             await this.bot.sendPhoto(chatId, im);
@@ -174,7 +175,7 @@ export class BotService implements OnModuleInit {
           } else if (actionSubMenu === GoroscopeMenuCallbacks.GOROSCOPE_TOMORROW) {
             await this.bot.sendMessage(chatId, 'Строю гороскоп на завтра...');
             await this.sendAnimationSign(chatId);
-            const response$ = this.gpt.send<string>('get-goroscope', JSON.stringify({ period: 'Tomorrow', sign: this.userService.getUserData(chatId).zodiac }));
+            const response$ = this.gpt.send<string>('get-goroscope', JSON.stringify({ period: 'Tomorrow', sign: LocaleZodiac[this.userService.getUserData(chatId).zodiac] }));
             const response = await lastValueFrom(response$);
             const im = await textOnImage(response);
             await this.bot.sendPhoto(chatId, im);
