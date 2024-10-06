@@ -8,7 +8,7 @@
   "scripts": {
     "build": "nest build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
-    "start": "npx prisma migrate dev --name init && nest start",
+    "start": "npx prisma migrate deploy && nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
@@ -26,6 +26,7 @@
     "@nestjs/mapped-types": "*",
     "@nestjs/microservices": "^10.4.1",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/schedule": "^4.1.1",
     "@prisma/client": "^5.18.0",
     "axios": "^1.7.5",
     "canvas": "^2.11.2",

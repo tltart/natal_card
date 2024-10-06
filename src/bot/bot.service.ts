@@ -13,8 +13,8 @@ import { ErrorsEnum } from 'src/errors/errorsEnum';
 import { LocaleMainMenu, mainMenuItems } from 'src/Menu/itemsMenu/itemsMainMenu';
 import { GoroscopeMenuCallbacks } from 'src/Menu/itemsMenu/goroscopeMenu';
 import { textOnImage } from '../shared/textOnImage';
-import { lastValueFrom } from 'rxjs';
 import { LocaleZodiac } from 'src/users/interfaces/userData';
+import { GoroscopeService } from 'src/goroscope/goroscope.service';
 
 @Injectable()
 export class BotService implements OnModuleInit {
@@ -26,6 +26,7 @@ export class BotService implements OnModuleInit {
     private readonly mainMenuService: MenuService,
     private readonly userService: UserService,
     private readonly chatService: ChatService,
+    private readonly goroscopeService: GoroscopeService,
   ) {}
 
   async onModuleInit() {
@@ -143,16 +144,23 @@ export class BotService implements OnModuleInit {
               await this.userService.updateUser(chatId);
               await this.sendMessageToBot({ chatId, message: 'Данные успешно обновлены' });
               this.userService.isUpdatedData.set(chatId, false);
+              await this.sendMessageToBot({ chatId, message: Messages.PREPARING_GOROSCOPE_TODAY });
+              await this.sendAnimationSign(chatId);
+              const goroscope = await this.goroscopeService.getGoroscope(LocaleZodiac[this.userService.getUserData(chatId).zodiac], 'today');
+              const im = await textOnImage(goroscope.today);
+              await this.bot.sendPhoto(chatId, im);
+              await this.sendKeyboard({ chatId, title: 'Выбрать действие', menu: this.mainMenuService.getMainMenuKeboard() });
               return;
             }
             await this.userService.createUser(chatId);
             await this.sendMessageToBot({ chatId, message: Messages.PREPARING_GOROSCOPE_TODAY });
             await this.sendAnimationSign(chatId);
-            const response$ = this.gpt.send<string>('get-goroscope', JSON.stringify({ period: 'Today', sign: LocaleZodiac[this.userService.getUserData(chatId).zodiac] }));
-            const response = await lastValueFrom(response$);
-            const im = await textOnImage(response);
+            const goroscope = await this.goroscopeService.getGoroscope(LocaleZodiac[this.userService.getUserData(chatId).zodiac], 'today');
+            const im = await textOnImage(goroscope.today);
+            
             await this.bot.sendPhoto(chatId, im);
             await this.sendKeyboard({ chatId, title: 'Выбрать действие', menu: this.mainMenuService.getMainMenuKeboard() });
+            await this.userService.updateLastTimeReport(this.userService.getUserData(chatId).id);
             return;
           } else if (actionSubMenu === UserDataActionMenuCallbacks.UPDATE) {
             this.userService.dropUserData(chatId);
@@ -166,20 +174,19 @@ export class BotService implements OnModuleInit {
             return await this.sendMessageToBot({ chatId, message: 'Данные успешно удалены' });
           } else if (actionSubMenu === GoroscopeMenuCallbacks.GOROSCOPE_TODAY) {
             await this.bot.sendMessage(chatId, 'Строю гороскоп на сегодня...');
-            await this.sendAnimationSign(chatId);
-            const response$ = this.gpt.send<string>('get-goroscope', JSON.stringify({ period: 'Today', sign: LocaleZodiac[this.userService.getUserData(chatId).zodiac] }));
-            const response = await lastValueFrom(response$);
-            const im = await textOnImage(response);
+            const goroscope = await this.goroscopeService.getGoroscope(LocaleZodiac[this.userService.getUserData(chatId).zodiac], 'today');
+
+            const im = await textOnImage(goroscope.today);
             await this.bot.sendPhoto(chatId, im);
+            await this.userService.updateLastTimeReport(this.userService.getUserData(chatId).id);
             return;
           } else if (actionSubMenu === GoroscopeMenuCallbacks.GOROSCOPE_TOMORROW) {
             await this.bot.sendMessage(chatId, 'Строю гороскоп на завтра...');
-            await this.sendAnimationSign(chatId);
-            const response$ = this.gpt.send<string>('get-goroscope', JSON.stringify({ period: 'Tomorrow', sign: LocaleZodiac[this.userService.getUserData(chatId).zodiac] }));
-            const response = await lastValueFrom(response$);
-            const im = await textOnImage(response);
-            await this.bot.sendPhoto(chatId, im);
+            const goroscope = await this.goroscopeService.getGoroscope(LocaleZodiac[this.userService.getUserData(chatId).zodiac], 'tommorow');
 
+            const im = await textOnImage(goroscope.tommorow);
+            await this.bot.sendPhoto(chatId, im);
+            await this.userService.updateLastTimeReport(this.userService.getUserData(chatId).id);
             return;
           }
           await this.bot.sendMessage(chatId, actionSubMenu);

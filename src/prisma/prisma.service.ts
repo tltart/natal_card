@@ -1,4 +1,4 @@
-import { INestApplication, Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
@@ -19,15 +19,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     return this.chat.create({ data: { chatId } });
   }
 
-  async createCountReport({
-    chatId,
-    countReportDay,
-    dayLimit,
-  }: {
-    chatId: number;
-    countReportDay: number;
-    dayLimit: number;
-  }) {
+  async createCountReport({ chatId, countReportDay, dayLimit }: { chatId: number; countReportDay: number; dayLimit: number }) {
     return this.countReports.create({
       data: { chatId, countReportDay, dayLimit },
     });
@@ -57,13 +49,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     });
   }
 
-  async createTarget(
-    chatId: number,
-    birthDate: string,
-    birthTime: string,
-    birthPlace: string,
-    name: string,
-  ) {
+  async createTarget(chatId: number, birthDate: string, birthTime: string, birthPlace: string, name: string) {
     return this.user.create({
       data: {
         chatId,
@@ -110,6 +96,79 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
     });
   }
 
+  async findGoroscopeBySignAndDay(sign: string, day: 'today' | 'tommorow') {
+    const select = day === 'today' ? { today: true, updatedToday: true } : { tommorow: true, updatedTommorow: true };
+    const goroscope = await this.goroscopes.findFirst({ where: { sign }, select });
+    return goroscope;
+  }
+
+  async findAllGoroscopesByDay(day: 'today' | 'tommorow') {
+    const select = day === 'today' ? { sign: true, today: true, updatedToday: true } : { sign: true, tommorow: true, updatedTommorow: true };
+    const goroscope = await this.goroscopes.findMany({ select });
+    return goroscope;
+  }
+
+  async createGoroscope({ sign, day, text }: { sign: string; day: 'today' | 'tommorow'; text: string }) {
+    const data: {
+      sign: string;
+      today?: string;
+      updatedToday?: string;
+      tommorow?: string;
+      updatedTommorow?: string;
+    } = { sign };
+
+    if (day === 'today') {
+      data.today = text;
+      data.updatedToday = new Date().toISOString();
+    } else {
+      data.tommorow = text;
+      data.updatedTommorow = new Date().toISOString();
+    }
+
+    return this.goroscopes.create({
+      data,
+    });
+  }
+
+  async updateGoroscope({ sign, day, text }: { sign: string; day: 'today' | 'tommorow'; text: string }) {
+    const data: {
+      sign: string;
+      today?: string;
+      updatedToday?: string;
+      tommorow?: string;
+      updatedTommorow?: string;
+    } = { sign };
+
+    if (day === 'today') {
+      data.today = text;
+      data.updatedToday = new Date().toISOString();
+    } else {
+      data.tommorow = text;
+      data.updatedTommorow = new Date().toISOString();
+    }
+
+    return this.goroscopes.update({
+      where: { sign },
+      data,
+    });
+  }
+
+  async reverseGoroscopeDay() {
+    const goroscopesTommorow = await this.goroscopes.findMany();
+    await Promise.all(
+      goroscopesTommorow.map((el, idx) => {
+        return this.goroscopes.update({
+          where: {
+            sign: el.sign,
+          },
+          data: {
+            today: goroscopesTommorow[idx].tommorow,
+            tommorow: null,
+          },
+        });
+      }),
+    );
+  }
   // async enableShutdownHooks(app: INestApplication) {
   //   this.$on('', async () => {
   //     await app.close();

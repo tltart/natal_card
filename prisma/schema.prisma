@@ -25,6 +25,7 @@ model User {
   chatId     Int
   NatalCards NatalCards?
   createdAt  DateTime    @default(now())
+  lastReport DateTime?
 }
 
 model NatalCards {
@@ -43,4 +44,12 @@ model CountReports {
   countReportDay Int
   dayLimit       Int
   payedLimit     Int  @default(0)
+}
+
+model Goroscopes {
+  sign            String    @unique
+  today           String?
+  tommorow        String?
+  updatedToday    DateTime?
+  updatedTommorow DateTime?
 }

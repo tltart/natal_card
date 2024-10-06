@@ -20,6 +20,7 @@ export class UserService implements OnModuleInit {
   public get isUpdatedData(): Map<number, boolean> {
     return this._isUpdatedData;
   }
+
   public set isUpdatedData({ chatId, value }: { chatId: number; value: boolean }) {
     this._isUpdatedData.set(chatId, value);
   }
@@ -34,6 +35,7 @@ export class UserService implements OnModuleInit {
   }
 
   dropUserData(chatId: number) {
+    this.userData = { chatId, value: { id: null } };
     this.userData = { chatId, value: { name: null } };
     this.userData = { chatId, value: { birthDate: null } };
     this.userData = { chatId, value: { zodiac: null } };
@@ -113,11 +115,25 @@ export class UserService implements OnModuleInit {
     return this.prisma.findUsersByChatId(chat.id);
   }
 
+  async updateLastTimeReport(userId: number) {
+    return this.prisma.user.updateMany({
+      data: {
+        lastReport: new Date().toISOString(),
+      },
+      where: { id: userId },
+    });
+  }
+
+  async getLastTimeReportsLessThen(date: string) {
+    return this.prisma.user.findMany({ where: { lastReport: { lt: new Date(date) } } });
+  }
+
   async checkUserData(chatId: number) {
     if (this.checkFullUserData(chatId)) {
       const userInDb = await this.findUsersByChatId(chatId);
       if (userInDb) {
         this._userData.set(chatId, {
+          id: userInDb[0].id,
           birthDate: userInDb[0].birthDate,
           birthPlace: userInDb[0].birthPlace,
           birthTime: userInDb[0].birthTime,
@@ -126,7 +142,8 @@ export class UserService implements OnModuleInit {
         });
         return true;
       }
-      await this.createUser(chatId);
+      const user = await this.createUser(chatId);
+      this.userData = { chatId, value: { id: user.id } };
       return true;
     }
     return false;

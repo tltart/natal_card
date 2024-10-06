@@ -69,11 +69,11 @@ export const textOnImage = async (text: string) => {
 
     let currentX = 20;
     const gradient = ctx.createLinearGradient(currentX, y, maxWidth + currentX, y);
-    gradient.addColorStop(0, 'red');
-    gradient.addColorStop(0.25, 'green');
-    gradient.addColorStop(0.5, 'yellow');
+    gradient.addColorStop(0, 'Aqua');
+    gradient.addColorStop(0.25, 'GreenYellow');
+    gradient.addColorStop(0.5, 'Gold');
     gradient.addColorStop(0.75, 'orange');
-    gradient.addColorStop(1, 'red');
+    gradient.addColorStop(1, 'Aqua');
 
     ctx.fillStyle = gradient;
     words.forEach((word: string) => {

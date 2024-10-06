@@ -14,6 +14,7 @@ export enum LocaleZodiac {
 }
 
 export interface IUserData {
+  id: number;
   name: string | null;
   birthDate: string | null;
   zodiac: keyof typeof LocaleZodiac | null;

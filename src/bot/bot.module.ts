@@ -6,6 +6,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { MenuModule } from 'src/Menu/menu.module';
 import { UserModule } from 'src/users/user.module';
 import { ChatModule } from 'src/chat/chat.module';
+import { GoroscopeModule } from 'src/goroscope/goroscope.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ChatModule } from 'src/chat/chat.module';
         },
       },
     ]),
+    GoroscopeModule,
   ],
   providers: [BotService, PrismaService],
 })
