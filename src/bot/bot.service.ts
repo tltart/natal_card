@@ -211,6 +211,7 @@ export class BotService implements OnModuleInit {
     }
     const user = this.userService.getUserData(chatId);
     if (message === LocaleMainMenu.USER_DATA) {
+      await this.sendAnimationSign(chatId);
       return await this.sendInlineMenuToBot({
         chatId,
         title: `Ваши данные:\n\n\<b>🏷 Имя:</b> ${user.name}\n<b>📆 Дата рождения:</b> ${user.birthDate}\n<b>⏰ Время рождения:</b> ${user.birthTime}\n<b>🌏Место рождения:</b> ${user.birthPlace}`,
