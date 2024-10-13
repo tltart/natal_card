@@ -7,6 +7,7 @@ import { MenuModule } from 'src/Menu/menu.module';
 import { UserModule } from 'src/users/user.module';
 import { ChatModule } from 'src/chat/chat.module';
 import { GoroscopeModule } from 'src/goroscope/goroscope.module';
+import { LunarModule } from 'src/lunar/lunar.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { GoroscopeModule } from 'src/goroscope/goroscope.module';
       },
     ]),
     GoroscopeModule,
+    LunarModule,
   ],
   providers: [BotService, PrismaService],
 })

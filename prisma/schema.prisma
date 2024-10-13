@@ -53,3 +53,8 @@ model Goroscopes {
   updatedToday    DateTime?
   updatedTommorow DateTime?
 }
+
+model Lunar {
+  day DateTime @unique
+  text Json
+}

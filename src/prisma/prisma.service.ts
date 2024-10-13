@@ -169,6 +169,46 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       }),
     );
   }
+
+  async findLunarPhaseByDay(date: Date) {
+    const startOfDay = new Date(`${date.getFullYear()}-${('0' + (date.getMonth() + 1)).slice(-2)}-${('0' + date.getDate()).slice(-2)}T00:00:00.000Z`);
+    const endOfDay = new Date(`${date.getFullYear()}-${('0' + (date.getMonth() + 1)).slice(-2)}-${('0' + date.getDate()).slice(-2)}T23:59:59.999Z`);
+    
+    return this.lunar.findFirst({
+      where: {
+        day: {
+          gte: startOfDay,
+          lte: endOfDay,
+        },
+      },
+    });
+  }
+
+  async findLunarPhaseByWeek(date: Date) {
+    const startOfWeek = new Date(date);
+    const endOfWeek = new Date(date);
+    
+    const dayOfWeek = startOfWeek.getDay();
+  
+    const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1);
+    const diffToSunday = 7 - dayOfWeek;
+  
+    startOfWeek.setDate(startOfWeek.getDate() - diffToMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+  
+    endOfWeek.setDate(endOfWeek.getDate() + diffToSunday - 1);
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    return this.lunar.findMany({
+      where: {
+        day: {
+          gte: startOfWeek,
+          lte: endOfWeek,
+        },
+      },
+    });
+  }
+
   // async enableShutdownHooks(app: INestApplication) {
   //   this.$on('', async () => {
   //     await app.close();

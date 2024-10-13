@@ -15,6 +15,7 @@ import { GoroscopeMenuCallbacks } from 'src/Menu/itemsMenu/goroscopeMenu';
 import { textOnImage } from '../shared/textOnImage';
 import { LocaleZodiac } from 'src/users/interfaces/userData';
 import { GoroscopeService } from 'src/goroscope/goroscope.service';
+import { LunarService } from 'src/lunar/lunar.service';
 
 @Injectable()
 export class BotService implements OnModuleInit {
@@ -27,6 +28,7 @@ export class BotService implements OnModuleInit {
     private readonly userService: UserService,
     private readonly chatService: ChatService,
     private readonly goroscopeService: GoroscopeService,
+    private readonly lunarService: LunarService,
   ) {}
 
   async onModuleInit() {
@@ -101,6 +103,9 @@ export class BotService implements OnModuleInit {
         await this.sendMessageToBot({ chatId, message });
         return;
       }
+      const imgPath = path.resolve(__dirname, '../..', `static/card.png`);
+      const buff = fs.readFileSync(imgPath);
+      await this.bot.sendPhoto(chatId, buff);
       return await this.sendKeyboard({ chatId, title: 'Выбрать действие', menu: this.mainMenuService.getMainMenuKeboard() });
     });
 
@@ -219,6 +224,11 @@ export class BotService implements OnModuleInit {
       });
     } else if (message === LocaleMainMenu.GOROSCOPES) {
       return await this.sendInlineMenuToBot({ chatId, title: 'Выбрать гороскоп', menu: this.mainMenuService.getGoroscopeMenu() });
+    } else if (message === LocaleMainMenu.MOON_DATA) {
+      const lunarData = await this.lunarService.getImage();
+      
+      await this.bot.sendPhoto(chatId, lunarData);
+      return;
     }
   }
 

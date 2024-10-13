@@ -8,11 +8,13 @@ export enum MainMenuCallbacks {
   FINANSE_ANALYZE = 'FINANSE_ANALYZE',
   USER_DATA = 'USER_DATA',
   GOROSCOPES = 'GOROSCOPES',
+  MOON_DATA = 'MOON_DATA',
 }
 
 export enum LocaleMainMenu {
   USER_DATA = '📜 Мои данные',
   GOROSCOPES = '🌌 Гороскопы',
+  MOON_DATA = '🌘 Фаза луны',
   MAIN_MENU = 'Главное меню',
   PREDICT = 'Прогнозы',
   ANALYZE_PERSON = 'Анализ личности',
@@ -57,5 +59,9 @@ export const mainMenuItems: { text: string; callback_data: string }[] = [
   {
     text: LocaleMainMenu.GOROSCOPES,
     callback_data: MainMenuCallbacks.GOROSCOPES,
+  },
+  {
+    text: LocaleMainMenu.MOON_DATA,
+    callback_data: MainMenuCallbacks.MOON_DATA,
   },
 ];
